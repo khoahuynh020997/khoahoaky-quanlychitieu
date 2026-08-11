@@ -73,7 +73,7 @@
             <!-- Ô HIỂN THỊ SỐ TIỀN & CẤU HÌNH -->
             <div class="flex flex-col items-center justify-center my-auto py-2">
                 <!-- Chuyển đổi Chi tiêu / Thu nhập -->
-                <div class="flex gap-2 mb-3 bg-slate-900 p-1 rounded-full border border-slate-800">
+                <div class="flex gap-2 mb-2 bg-slate-900 p-1 rounded-full border border-slate-800">
                     <button id="type-expense" onclick="setTransactionType('expense')" class="px-4 py-1 rounded-full text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30">
                         Chi tiêu (-)
                     </button>
@@ -88,17 +88,24 @@
                     <span id="unit-display" class="text-xl font-bold text-slate-400">.000đ</span>
                 </div>
                 
-                <p id="amount-preview" class="text-xs text-slate-500 h-4 mt-1 font-medium">Bằng chữ: 0 VNĐ</p>
+                <p id="amount-preview" class="text-xs text-slate-500 h-4 mt-0.5 font-medium">Bằng chữ: 0 VNĐ</p>
             </div>
 
             <!-- CHỌN DANH MỤC (NHẤN VÀO LÀ LƯU LUÔN) -->
-            <div class="mb-3">
-                <div class="flex justify-between items-center mb-2 px-1">
+            <div class="mb-2">
+                <div class="flex justify-between items-center mb-1.5 px-1">
                     <span class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Chọn danh mục (Lưu ngay ⚡)</span>
                     <span class="text-[10px] text-amber-400/80">Tự động thêm .000đ</span>
                 </div>
                 <div id="category-grid" class="grid grid-cols-4 gap-2">
                     <!-- Sẽ được tạo bởi JS -->
+                </div>
+            </div>
+
+            <!-- Ô NHẬP GHI CHÚ NHANH (TÙY CHỌN) -->
+            <div class="mb-2">
+                <div class="relative">
+                    <input id="quick-note-input" type="text" placeholder="📝 Ghi chú nhanh (không bắt buộc)..." class="w-full bg-slate-900/90 border border-slate-800 text-xs rounded-xl px-3 py-2 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/60">
                 </div>
             </div>
 
@@ -206,7 +213,7 @@
             </div>
         </main>
 
-        <!-- HỘP THOẠI MODAL CÀI ĐẶT NGÂN SÁCH (CẢI TIẾN) -->
+        <!-- HỘP THOẠI MODAL CÀI ĐẶT NGÂN SÁCH -->
         <div id="budget-modal" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-200">
             <div class="bg-slate-900 border border-slate-800 w-full max-w-xs rounded-2xl p-5 shadow-2xl flex flex-col gap-4 transform scale-95 transition-transform duration-200" id="budget-modal-card">
                 <div class="flex justify-between items-center">
@@ -253,6 +260,37 @@
             </div>
         </div>
 
+        <!-- HỘP THOẠI MODAL THÊM/SỬA GHI CHÚ SAU -->
+        <div id="note-modal" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-200">
+            <div class="bg-slate-900 border border-slate-800 w-full max-w-xs rounded-2xl p-5 shadow-2xl flex flex-col gap-3 transform scale-95 transition-transform duration-200" id="note-modal-card">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                            <i data-lucide="edit-3" class="w-4 h-4"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-100 text-base">Cập nhật ghi chú</h3>
+                    </div>
+                    <button onclick="closeNoteModal()" class="text-slate-400 hover:text-white p-1">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-[11px] text-slate-400 font-medium">Nội dung ghi chú giao dịch:</label>
+                    <textarea id="edit-note-input" rows="3" placeholder="Nhập ghi chú (VD: Tiền chợ tuần này, Tiền điện nước...)..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 text-xs focus:outline-none focus:border-amber-500 resize-none"></textarea>
+                </div>
+
+                <div class="flex gap-2 mt-1">
+                    <button onclick="closeNoteModal()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs">
+                        Hủy
+                    </button>
+                    <button onclick="saveNoteFromModal()" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20">
+                        Lưu ghi chú
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- FOOTER: Nhắc nhở tốc độ & Thông tin bản quyền -->
         <footer class="py-2.5 px-4 bg-slate-900 border-t border-slate-800 text-center flex flex-col gap-1">
             <div class="text-[11px] text-slate-400 flex items-center justify-center gap-1">
@@ -271,7 +309,7 @@
 
     <!-- JAVASCRIPT XỬ LÝ LÔ-GÍC -->
     <script>
-        // Danh mục giao dịch mặc định
+        // Danh mục giao dịch mặc định (Đã cập nhật danh mục 'Đưa vợ')
         const CATEGORIES = [
             { id: 'coffee', name: 'Cà phê', icon: 'coffee', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
             { id: 'food', name: 'Ăn uống', icon: 'utensils', color: 'bg-orange-500/20 text-orange-400 border-orange-500/30' },
@@ -279,7 +317,7 @@
             { id: 'shopping', name: 'Mua sắm', icon: 'shopping-bag', color: 'bg-pink-500/20 text-pink-400 border-pink-500/30' },
             { id: 'market', name: 'Đi chợ', icon: 'shopping-cart', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
             { id: 'bills', name: 'Hóa đơn', icon: 'receipt', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
-            { id: 'entertainment', name: 'Giải trí', icon: 'gamepad-2', color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' },
+            { id: 'wife', name: 'Đưa vợ', icon: 'heart', color: 'bg-rose-500/20 text-rose-400 border-rose-500/30' },
             { id: 'other', name: 'Khác', icon: 'more-horizontal', color: 'bg-slate-700/40 text-slate-300 border-slate-600/30' },
         ];
 
@@ -289,6 +327,7 @@
         let currentRange = "month";  // Mặc định là 'month' theo hình mẫu
         let transactions = JSON.parse(localStorage.getItem('3s_transactions') || '[]');
         let monthlyBudget = Number(localStorage.getItem('3s_monthly_budget') || '0');
+        let editingTxId = null; // Lưu ID giao dịch đang sửa ghi chú
         let chartInstance = null;
 
         // Khởi tạo ứng dụng
@@ -396,6 +435,7 @@
 
             const actualAmount = val * 1000;
             const category = CATEGORIES.find(c => c.id === catId);
+            const quickNote = document.getElementById('quick-note-input').value.trim();
 
             const newTx = {
                 id: Date.now(),
@@ -404,6 +444,7 @@
                 categoryId: catId,
                 categoryName: category ? category.name : 'Khác',
                 categoryIcon: category ? category.icon : 'more-horizontal',
+                note: quickNote,
                 date: new Date().toISOString()
             };
 
@@ -414,8 +455,9 @@
             const prefix = currentType === 'expense' ? '-' : '+';
             showToast(`Đã lưu ${prefix}${actualAmount.toLocaleString('vi-VN')}đ (${category.name})`);
 
-            // Reset bàn phím về trạng thái ban đầu
+            // Reset bàn phím và ô ghi chú nhanh
             currentAmountStr = "0";
+            document.getElementById('quick-note-input').value = "";
             updateDisplay();
         }
 
@@ -446,28 +488,83 @@
                 const dateObj = new Date(tx.date);
                 const timeStr = `${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')} - ${dateObj.getDate()}/${dateObj.getMonth() + 1}`;
                 const isExpense = tx.type === 'expense';
-                
+                const hasNote = tx.note && tx.note.trim() !== '';
+
                 return `
                     <div class="flex justify-between items-center bg-slate-900 border border-slate-800 p-3 rounded-xl">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-amber-400">
+                        <div class="flex items-center gap-3 overflow-hidden mr-2">
+                            <div class="w-10 h-10 shrink-0 rounded-xl bg-slate-800 flex items-center justify-center text-amber-400">
                                 <i data-lucide="${tx.categoryIcon || 'tag'}" class="w-5 h-5"></i>
                             </div>
-                            <div>
-                                <div class="font-semibold text-sm text-slate-200">${tx.categoryName}</div>
+                            <div class="overflow-hidden">
+                                <div class="font-semibold text-sm text-slate-200 flex items-center gap-1.5">
+                                    <span>${tx.categoryName}</span>
+                                    <button onclick="openNoteModal(${tx.id})" class="text-slate-500 hover:text-amber-400 transition-colors p-0.5" title="Sửa ghi chú">
+                                        <i data-lucide="${hasNote ? 'file-text' : 'plus-circle'}" class="w-3.5 h-3.5 ${hasNote ? 'text-amber-400/80' : ''}"></i>
+                                    </button>
+                                </div>
+                                ${hasNote ? `<div class="text-xs text-amber-300/80 italic truncate font-normal">"${tx.note}"</div>` : ''}
                                 <div class="text-[11px] text-slate-500">${timeStr}</div>
                             </div>
                         </div>
-                        <div class="text-right">
+                        <div class="text-right shrink-0">
                             <div class="font-bold text-sm ${isExpense ? 'text-red-400' : 'text-emerald-400'}">
                                 ${isExpense ? '-' : '+'}${tx.amount.toLocaleString('vi-VN')}đ
                             </div>
-                            <button onclick="deleteTx(${tx.id})" class="text-[10px] text-slate-500 hover:text-red-400 mt-0.5">Xóa</button>
+                            <div class="flex justify-end gap-2 mt-0.5">
+                                <button onclick="openNoteModal(${tx.id})" class="text-[10px] text-amber-400/80 hover:underline">Ghi chú</button>
+                                <button onclick="deleteTx(${tx.id})" class="text-[10px] text-slate-500 hover:text-red-400">Xóa</button>
+                            </div>
                         </div>
                     </div>
                 `;
             }).join('');
             lucide.createIcons();
+        }
+
+        // XỬ LÝ QUẢN LÝ MODAL GHI CHÚ
+        function openNoteModal(txId) {
+            editingTxId = txId;
+            const tx = transactions.find(t => t.id === txId);
+            if (!tx) return;
+
+            const modal = document.getElementById('note-modal');
+            const card = document.getElementById('note-modal-card');
+            const input = document.getElementById('edit-note-input');
+
+            input.value = tx.note || '';
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100');
+            card.classList.remove('scale-95');
+            card.classList.add('scale-100');
+
+            setTimeout(() => input.focus(), 100);
+        }
+
+        function closeNoteModal() {
+            const modal = document.getElementById('note-modal');
+            const card = document.getElementById('note-modal-card');
+
+            modal.classList.remove('opacity-100');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            card.classList.remove('scale-100');
+            card.classList.add('scale-95');
+            editingTxId = null;
+        }
+
+        function saveNoteFromModal() {
+            if (!editingTxId) return;
+            const noteVal = document.getElementById('edit-note-input').value.trim();
+
+            const txIndex = transactions.findIndex(t => t.id === editingTxId);
+            if (txIndex !== -1) {
+                transactions[txIndex].note = noteVal;
+                localStorage.setItem('3s_transactions', JSON.stringify(transactions));
+                renderHistory();
+                closeNoteModal();
+                showToast("Đã cập nhật ghi chú!");
+            }
         }
 
         // Xóa một giao dịch
@@ -691,7 +788,7 @@
                         data: data,
                         backgroundColor: [
                             '#f59e0b', '#f97316', '#3b82f6', '#ec4899', 
-                            '#10b981', '#a855f7', '#6366f1', '#64748b'
+                            '#10b981', '#a855f7', '#f43f5e', '#64748b'
                         ],
                         borderWidth: 0
                     }]
