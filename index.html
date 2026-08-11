@@ -133,9 +133,13 @@
             <div class="flex justify-between items-center mb-1">
                 <h2 class="font-bold text-lg">Tổng quan chi tiêu</h2>
                 <div class="flex gap-1 bg-slate-800 p-1 rounded-lg text-xs">
-                    <button id="filter-today" onclick="filterStats('today')" class="px-2 py-1 rounded text-slate-400">Hôm nay</button>
+                    <!-- Nút Chọn Ngày / Hôm Nay (Có biểu tượng Lịch) -->
+                    <button id="filter-today" onclick="handleTodayClick()" class="px-2.5 py-1 rounded bg-amber-500 text-slate-950 font-bold flex items-center gap-1 transition-all">
+                        <i data-lucide="calendar" class="w-3 h-3"></i>
+                        <span id="filter-today-label">Hôm nay</span>
+                    </button>
                     <button id="filter-week" onclick="filterStats('week')" class="px-2 py-1 rounded text-slate-400">Tuần này</button>
-                    <button id="filter-month" onclick="filterStats('month')" class="px-2 py-1 rounded bg-amber-500 text-slate-950 font-bold">Tháng này</button>
+                    <button id="filter-month" onclick="filterStats('month')" class="px-2 py-1 rounded text-slate-400">Tháng này</button>
                 </div>
             </div>
 
@@ -212,6 +216,40 @@
                 <!-- Danh sách lịch sử hiển thị tại đây -->
             </div>
         </main>
+
+        <!-- HỘP THOẠI MODAL CHỌN NGÀY LỊCH (DATE PICKER MODAL) -->
+        <div id="datepicker-modal" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-200">
+            <div class="bg-slate-900 border border-slate-800 w-full max-w-xs rounded-2xl p-5 shadow-2xl flex flex-col gap-4 transform scale-95 transition-transform duration-200" id="datepicker-modal-card">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                            <i data-lucide="calendar" class="w-4 h-4"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-100 text-base">Chọn ngày xem báo cáo</h3>
+                    </div>
+                    <button onclick="closeDatePickerModal()" class="text-slate-400 hover:text-white p-1">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <p class="text-xs text-slate-400">Chọn ngày bạn muốn kiểm tra thống kê thu chi:</p>
+
+                <!-- Thao tác chọn ngày -->
+                <div class="flex flex-col gap-2">
+                    <input id="custom-date-input" type="date" class="w-full bg-slate-950 border border-slate-800 text-amber-400 font-bold text-sm rounded-xl p-3 focus:outline-none focus:border-amber-500">
+                </div>
+
+                <!-- Nút thao tác nhanh -->
+                <div class="flex gap-2">
+                    <button onclick="selectToday()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs">
+                        Hôm nay
+                    </button>
+                    <button onclick="confirmCustomDate()" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20">
+                        Xem ngày này
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <!-- HỘP THOẠI MODAL CÀI ĐẶT NGÂN SÁCH -->
         <div id="budget-modal" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-200">
@@ -324,7 +362,8 @@
         // Biến trạng thái ứng dụng
         let currentAmountStr = "0";
         let currentType = "expense"; // 'expense' hoặc 'income'
-        let currentRange = "month";  // Mặc định là 'month' theo hình mẫu
+        let currentRange = "today";  // Mặc định là 'today'
+        let selectedCustomDate = null; // Ngày tùy chỉnh (YYYY-MM-DD)
         let transactions = JSON.parse(localStorage.getItem('3s_transactions') || '[]');
         let monthlyBudget = Number(localStorage.getItem('3s_monthly_budget') || '0');
         let editingTxId = null; // Lưu ID giao dịch đang sửa ghi chú
@@ -567,6 +606,65 @@
             }
         }
 
+        // Xử lý sự kiện khi bấm nút Hôm nay / Chọn ngày trong tab Thống kê
+        function handleTodayClick() {
+            if (currentRange === 'today' && !selectedCustomDate) {
+                // Nếu đang chọn Hôm nay sẵn, bấm tiếp sẽ mở Lịch chọn ngày
+                openDatePickerModal();
+            } else {
+                // Chuyển chế độ sang Today / Xem theo ngày
+                openDatePickerModal();
+            }
+        }
+
+        function openDatePickerModal() {
+            const modal = document.getElementById('datepicker-modal');
+            const card = document.getElementById('datepicker-modal-card');
+            const input = document.getElementById('custom-date-input');
+
+            const now = new Date();
+            const defaultDateStr = selectedCustomDate || now.toISOString().split('T')[0];
+            input.value = defaultDateStr;
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100');
+            card.classList.remove('scale-95');
+            card.classList.add('scale-100');
+        }
+
+        function closeDatePickerModal() {
+            const modal = document.getElementById('datepicker-modal');
+            const card = document.getElementById('datepicker-modal-card');
+
+            modal.classList.remove('opacity-100');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            card.classList.remove('scale-100');
+            card.classList.add('scale-95');
+        }
+
+        function selectToday() {
+            selectedCustomDate = null;
+            closeDatePickerModal();
+            filterStats('today');
+        }
+
+        function confirmCustomDate() {
+            const inputVal = document.getElementById('custom-date-input').value;
+            if (inputVal) {
+                const now = new Date();
+                const todayStr = now.toISOString().split('T')[0];
+                
+                if (inputVal === todayStr) {
+                    selectedCustomDate = null;
+                } else {
+                    selectedCustomDate = inputVal;
+                }
+                
+                closeDatePickerModal();
+                filterStats('today');
+            }
+        }
+
         // Xóa một giao dịch
         function deleteTx(id) {
             transactions = transactions.filter(t => t.id !== id);
@@ -586,12 +684,36 @@
         // Lọc và Tính toán Thống kê Báo cáo
         function filterStats(range) {
             currentRange = range;
-            ['today', 'week', 'month'].forEach(r => {
-                const btn = document.getElementById(`filter-${r}`);
-                if (r === range) {
-                    btn.className = "px-2 py-1 rounded bg-amber-500 text-slate-950 font-bold";
+            if (range !== 'today') {
+                selectedCustomDate = null; // Reset ngày tùy chỉnh nếu chọn tuần/tháng
+            }
+
+            const todayLabelEl = document.getElementById('filter-today-label');
+            const todayBtn = document.getElementById('filter-today');
+            const weekBtn = document.getElementById('filter-week');
+            const monthBtn = document.getElementById('filter-month');
+
+            // Cập nhật nhãn nút Hôm nay
+            if (selectedCustomDate) {
+                const parts = selectedCustomDate.split('-');
+                todayLabelEl.innerText = `${parts[2]}/${parts[1]}`;
+            } else {
+                todayLabelEl.innerText = "Hôm nay";
+            }
+
+            [
+                { r: 'today', btn: todayBtn },
+                { r: 'week', btn: weekBtn },
+                { r: 'month', btn: monthBtn }
+            ].forEach(item => {
+                if (item.r === range) {
+                    item.btn.className = item.r === 'today' 
+                        ? "px-2.5 py-1 rounded bg-amber-500 text-slate-950 font-bold flex items-center gap-1 transition-all" 
+                        : "px-2 py-1 rounded bg-amber-500 text-slate-950 font-bold";
                 } else {
-                    btn.className = "px-2 py-1 rounded text-slate-400";
+                    item.btn.className = item.r === 'today'
+                        ? "px-2.5 py-1 rounded text-slate-400 hover:text-white flex items-center gap-1 transition-all"
+                        : "px-2 py-1 rounded text-slate-400 hover:text-white";
                 }
             });
 
@@ -664,15 +786,25 @@
             }
         }
 
-        function renderStats(range = 'month') {
+        function renderStats(range = 'today') {
             const now = new Date();
             let filtered = transactions;
 
             if (range === 'today') {
-                filtered = transactions.filter(t => {
-                    const d = new Date(t.date);
-                    return d.toDateString() === now.toDateString();
-                });
+                if (selectedCustomDate) {
+                    // Xem theo ngày được chọn cụ thể
+                    filtered = transactions.filter(t => {
+                        const d = new Date(t.date);
+                        const dateStr = d.toISOString().split('T')[0];
+                        return dateStr === selectedCustomDate;
+                    });
+                } else {
+                    // Xem ngày Hôm Nay
+                    filtered = transactions.filter(t => {
+                        const d = new Date(t.date);
+                        return d.toDateString() === now.toDateString();
+                    });
+                }
             } else if (range === 'week') {
                 const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
                 filtered = transactions.filter(t => new Date(t.date) >= oneWeekAgo);
