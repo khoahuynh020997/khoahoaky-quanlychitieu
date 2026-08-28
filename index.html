@@ -100,6 +100,7 @@
                 <div id="category-grid" class="grid grid-cols-4 gap-2">
                     <!-- Sẽ được tạo bởi JS -->
                 </div>
+                <p class="text-[10px] text-slate-500 mt-1.5 px-1">Giữ một danh mục để tùy chỉnh emoji</p>
             </div>
 
             <!-- Ô NHẬP GHI CHÚ NHANH (TÙY CHỌN) -->
@@ -329,6 +330,34 @@
             </div>
         </div>
 
+        <!-- HỘP THOẠI TÙY CHỈNH EMOJI DANH MỤC -->
+        <div id="emoji-modal" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-200">
+            <div class="bg-slate-900 border border-slate-800 w-full max-w-xs rounded-2xl p-5 shadow-2xl flex flex-col gap-3 transform scale-95 transition-transform duration-200" id="emoji-modal-card">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-base">🎨</div>
+                        <div>
+                            <h3 class="font-bold text-slate-100 text-base leading-tight">Tùy chỉnh emoji</h3>
+                            <p id="emoji-modal-cat" class="text-[11px] text-slate-400">Danh mục</p>
+                        </div>
+                    </div>
+                    <button onclick="closeEmojiModal()" class="text-slate-400 hover:text-white p-1">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <p class="text-[11px] text-slate-400">Chọn icon phù hợp với danh mục chi tiêu:</p>
+                <div id="emoji-picker-grid" class="grid grid-cols-6 gap-1.5 max-h-56 overflow-y-auto no-scrollbar"></div>
+                <div class="flex gap-2 mt-1">
+                    <button onclick="resetCategoryEmoji()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs">
+                        Mặc định
+                    </button>
+                    <button onclick="closeEmojiModal()" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20">
+                        Xong
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- FOOTER: Nhắc nhở tốc độ & Thông tin bản quyền -->
         <footer class="py-2.5 px-4 bg-slate-900 border-t border-slate-800 text-center flex flex-col gap-1">
             <div class="text-[11px] text-slate-400 flex items-center justify-center gap-1">
@@ -366,8 +395,23 @@
         let selectedCustomDate = null; // Ngày tùy chỉnh (YYYY-MM-DD)
         let transactions = JSON.parse(localStorage.getItem('3s_transactions') || '[]');
         let monthlyBudget = Number(localStorage.getItem('3s_monthly_budget') || '0');
+        let customIcons = JSON.parse(localStorage.getItem('3s_category_icons') || '{}');
         let editingTxId = null; // Lưu ID giao dịch đang sửa ghi chú
+        let editingCatId = null; // Danh mục đang đổi emoji
         let chartInstance = null;
+        let catPressTimer = null;
+        let catLongPress = false;
+
+        const APP_EMOJIS = [
+            '💼','💻','👔','🏢','📊','📝',
+            '🍜','☕','🍚','🍱','🍔','🍕','🥤','🍺','🥐',
+            '⛽','🛵','🚗','🚕','🚌','🚲',
+            '🛍️','🛒','👗','👟','📱','🎁',
+            '🤝','🥂','✈️','🏨','🎯','🎤',
+            '🧾','💡','💧','🏠','💳','📡',
+            '❤️','👨‍👩‍👧','👶','🐶','🎂','🏡',
+            '📦','⭐','💰','🎮','💊','📚','🔧','✨','🐯'
+        ];
 
         // Khởi tạo ứng dụng
         document.addEventListener("DOMContentLoaded", () => {
@@ -415,31 +459,124 @@
             }
         }
 
-        // Icon danh mục dùng emoji phổ biến; giao dịch cũ (Lucide) vẫn map được
+        // Icon danh mục: emoji tùy chỉnh theo app; giao dịch cũ (Lucide) vẫn map được
+        const EMOJI_FALLBACK = {
+            'briefcase': '💼', 'work': '💼',
+            'utensils': '🍜', 'food': '🍜',
+            'fuel': '⛽',
+            'shopping-bag': '🛍️', 'shopping': '🛍️', 'shopping-cart': '🛍️',
+            'handshake': '🤝', 'diplomacy': '🤝', 'tiger': '🤝',
+            'receipt': '🧾', 'bills': '🧾',
+            'heart': '❤️', 'family': '❤️', 'wife': '❤️',
+            'package': '📦', 'other': '📦', 'more-horizontal': '📦'
+        };
+
+        function getCatIcon(cat) {
+            if (!cat) return '📦';
+            return customIcons[cat.id] || cat.icon;
+        }
+
         function renderIcon(icon, className) {
-            const emojiMap = {
-                '💼': '💼', 'briefcase': '💼', 'work': '💼',
-                '🍜': '🍜', 'utensils': '🍜', 'food': '🍜', '🍽️': '🍜',
-                '⛽': '⛽', 'fuel': '⛽',
-                '🛍️': '🛍️', 'shopping-bag': '🛍️', 'shopping': '🛍️', 'shopping-cart': '🛍️',
-                '🤝': '🤝', 'handshake': '🤝', 'diplomacy': '🤝', 'tiger': '🤝', '🐯': '🤝',
-                '🧾': '🧾', 'receipt': '🧾', 'bills': '🧾',
-                '❤️': '❤️', '❤': '❤️', 'heart': '❤️', 'family': '❤️', 'wife': '❤️',
-                '📦': '📦', 'package': '📦', 'other': '📦', 'more-horizontal': '📦'
-            };
-            if (emojiMap[icon]) {
-                return `<span class="${className} flex items-center justify-center text-[20px] leading-none select-none" aria-hidden="true">${emojiMap[icon]}</span>`;
+            const mapped = EMOJI_FALLBACK[icon] || icon || '📦';
+            if (/^[a-z0-9-]+$/i.test(mapped)) {
+                return `<i data-lucide="${mapped}" class="${className}"></i>`;
             }
-            return `<i data-lucide="${icon}" class="${className}"></i>`;
+            return `<span class="${className} flex items-center justify-center text-[20px] leading-none select-none" aria-hidden="true">${mapped}</span>`;
+        }
+
+        function handleCatDown(catId, ev) {
+            catLongPress = false;
+            clearTimeout(catPressTimer);
+            catPressTimer = setTimeout(() => {
+                catLongPress = true;
+                if (navigator.vibrate) navigator.vibrate(25);
+                openEmojiPicker(catId);
+            }, 520);
+        }
+
+        function handleCatUp(catId, ev) {
+            clearTimeout(catPressTimer);
+            catPressTimer = null;
+            if (catLongPress) {
+                ev.preventDefault();
+                return;
+            }
+            saveTransaction(catId);
+        }
+
+        function handleCatCancel() {
+            clearTimeout(catPressTimer);
+            catPressTimer = null;
+        }
+
+        function openEmojiPicker(catId) {
+            const cat = CATEGORIES.find(c => c.id === catId);
+            if (!cat) return;
+            editingCatId = catId;
+            document.getElementById('emoji-modal-cat').innerText = cat.name;
+            renderEmojiPicker();
+
+            const modal = document.getElementById('emoji-modal');
+            const card = document.getElementById('emoji-modal-card');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100');
+            card.classList.remove('scale-95');
+            card.classList.add('scale-100');
+            lucide.createIcons();
+        }
+
+        function closeEmojiModal() {
+            const modal = document.getElementById('emoji-modal');
+            const card = document.getElementById('emoji-modal-card');
+            modal.classList.remove('opacity-100');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            card.classList.remove('scale-100');
+            card.classList.add('scale-95');
+            editingCatId = null;
+        }
+
+        function renderEmojiPicker() {
+            const cat = CATEGORIES.find(c => c.id === editingCatId);
+            const current = getCatIcon(cat);
+            const grid = document.getElementById('emoji-picker-grid');
+            grid.innerHTML = APP_EMOJIS.map(emo => {
+                const active = emo === current
+                    ? 'bg-amber-500/20 border-amber-400'
+                    : 'bg-slate-800/80 border-slate-700 hover:border-amber-500/50';
+                return `<button type="button" onclick="selectCategoryEmoji('${emo}')" class="btn-active h-10 rounded-xl border text-xl flex items-center justify-center ${active}">${emo}</button>`;
+            }).join('');
+        }
+
+        function selectCategoryEmoji(emo) {
+            if (!editingCatId) return;
+            customIcons[editingCatId] = emo;
+            localStorage.setItem('3s_category_icons', JSON.stringify(customIcons));
+            renderCategories();
+            renderEmojiPicker();
+            showToast('Đã đổi emoji ' + (CATEGORIES.find(c => c.id === editingCatId) || {}).name);
+        }
+
+        function resetCategoryEmoji() {
+            if (!editingCatId) return;
+            delete customIcons[editingCatId];
+            localStorage.setItem('3s_category_icons', JSON.stringify(customIcons));
+            renderCategories();
+            renderEmojiPicker();
+            showToast('Đã về emoji mặc định');
         }
 
         // Hiển thị danh mục ra giao diện
         function renderCategories() {
             const grid = document.getElementById('category-grid');
             grid.innerHTML = CATEGORIES.map(cat => `
-                <button onclick="saveTransaction('${cat.id}')" 
+                <button type="button"
+                        onpointerdown="handleCatDown('${cat.id}', event)"
+                        onpointerup="handleCatUp('${cat.id}', event)"
+                        onpointerleave="handleCatCancel()"
+                        onpointercancel="handleCatCancel()"
+                        oncontextmenu="event.preventDefault(); return false;"
                         class="btn-active flex flex-col items-center justify-center p-2.5 rounded-2xl border ${cat.color} transition-all">
-                    ${renderIcon(cat.icon, 'w-6 h-6 mb-1')}
+                    ${renderIcon(getCatIcon(cat), 'w-6 h-6 mb-1')}
                     <span class="text-[11px] font-medium tracking-tight truncate w-full text-center">${cat.name}</span>
                 </button>
             `).join('');
@@ -500,7 +637,7 @@
                 type: currentType,
                 categoryId: catId,
                 categoryName: category ? category.name : 'Khác',
-                categoryIcon: category ? category.icon : 'more-horizontal',
+                categoryIcon: category ? getCatIcon(category) : '📦',
                 note: quickNote,
                 date: new Date().toISOString()
             };
