@@ -355,7 +355,7 @@
             { id: 'shopping', name: 'Mua sắm', icon: 'shopping-bag', color: 'bg-pink-500/20 text-pink-400 border-pink-500/30' },
             { id: 'diplomacy', name: 'Ngoại giao', icon: '🤝', color: 'bg-teal-500/20 text-teal-400 border-teal-500/30' },
             { id: 'bills', name: 'Hóa đơn', icon: 'receipt', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
-            { id: 'wife', name: 'Đưa vợ', icon: 'heart', color: 'bg-rose-500/20 text-rose-400 border-rose-500/30' },
+            { id: 'family', name: 'Gia đình', icon: '❤️', color: 'bg-rose-500/20 text-rose-400 border-rose-500/30' },
             { id: 'other', name: 'Khác', icon: 'more-horizontal', color: 'bg-slate-700/40 text-slate-300 border-slate-600/30' },
         ];
 
@@ -415,14 +415,19 @@
             }
         }
 
-        // Icon emoji (🤝 Ngoại giao) — còn lại dùng Lucide
+        // Icon emoji (🤝 Ngoại giao, ❤️ Gia đình) — còn lại dùng Lucide
         function renderIcon(icon, className) {
             const emojiMap = {
                 '🤝': '🤝',
                 'handshake': '🤝',
                 'diplomacy': '🤝',
                 'tiger': '🤝',
-                '🐯': '🤝'
+                '🐯': '🤝',
+                '❤️': '❤️',
+                '❤': '❤️',
+                'heart': '❤️',
+                'family': '❤️',
+                'wife': '❤️'
             };
             if (emojiMap[icon]) {
                 return `<span class="${className} flex items-center justify-center text-[20px] leading-none select-none" aria-hidden="true">${emojiMap[icon]}</span>`;
